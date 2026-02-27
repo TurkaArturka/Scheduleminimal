@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>РАЭПК Иркутск — Расписание (админ-панель)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Шапка с адресом + кнопки управления -->
+        <div class="header">
+            <div class="header-left">
+                <h1>Русско-Азиатский <span>экономико-правовой колледж</span></h1>
+                <p>📍 г. Иркутск, мкр. Солнечный, ул. Байкальская, 258А</p>
+                <div class="address-badge">
+                    🕙 Пн-Пт 9:00–16:00
+                </div>
+            </div>
+            <div class="header-actions" id="headerActions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">🌓 Тема</button>
+                <button class="login-toggle" id="loginToggle">🔑 Войти</button>
+                <!-- logout будет появляться здесь -->
+            </div>
+        </div>
+
+        <!-- Курсы -->
+        <div class="course-tabs">
+            <button class="course-btn active" data-course="1">1 курс</button>
+            <button class="course-btn" data-course="2">2 курс</button>
+            <button class="course-btn" data-course="3">3 курс</button>
+            <button class="course-btn" data-course="4">4 курс</button>
+        </div>
+
+        <div class="schedule-content">
+            <!-- Информационная строка -->
+            <div class="info-bar">
+                <div class="week-info" id="weekDisplay">🗓 Текущая неделя</div>
+                <div class="today" id="todayDisplay"></div>
+            </div>
+
+            <!-- Панель администрирования групп (появляется при isAdmin) -->
+            <div id="adminGroupPanel" class="admin-group-panel" style="display: none;">
+                <button class="admin-group-btn" id="addGroupBtn">➕ Добавить группу</button>
+                <button class="admin-group-btn" id="renameGroupBtn">✏️ Переименовать</button>
+                <button class="admin-group-btn" id="deleteGroupBtn">🗑️ Удалить группу</button>
+            </div>
+
+            <!-- Группы (динамические кнопки) -->
+            <div class="group-tabs" id="groupTabs"></div>
+
+            <!-- Таблица расписания с горизонтальным скроллом -->
+            <div class="table-wrapper">
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>Пара / Время</th>
+                            <th>Понедельник</th>
+                            <th>Вторник</th>
+                            <th>Среда</th>
+                            <th>Четверг</th>
+                            <th>Пятница</th>
+                            <th>Суббота</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleBody">
+                        <!-- заполняется через js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Админские кнопки управления парами (появляются при isAdmin) -->
+            <div id="adminScheduleActions" class="admin-schedule-actions" style="display: none;">
+                <button id="addLessonBtn">➕ Добавить пару в конец</button>
+                <button id="removeLessonBtn">➖ Удалить последнюю пару</button>
+                <button id="saveChangesBtn">💾 Сохранить изменения</button>
+                <button id="resetChangesBtn">↩️ Сбросить</button>
+            </div>
+
+            <div class="note">
+                ⚡ Расписание является ознакомительным. Актуальную информацию уточняйте у классного руководителя или в деканате.<br>
+                📞 Приёмная комиссия: 8(3952) 35-73-60.
+            </div>
+        </div>
+
+        <footer>
+            © 2026 Русско-Азиатский экономико-правовой колледж (г. Иркутск)
+        </footer>
+    </div>
+
+    <!-- Модальное окно входа -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2>Вход администратора</h2>
+            <form id="loginForm" onsubmit="return false;">
+                <label for="username">Имя пользователя</label>
+                <input type="text" id="username" placeholder="admin" autocomplete="off" inputmode="text">
+                <label for="password">Пароль</label>
+                <input type="password" id="password" placeholder="••••••••" inputmode="text">
+                <div id="loginError" class="error-message"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" id="cancelModal">Отмена</button>
+                    <button type="submit" class="btn-login" id="submitLogin">Войти</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно редактирования пары -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content edit-modal" onclick="event.stopPropagation()">
+            <h2>Редактирование пары</h2>
+            <form id="editForm" onsubmit="return false;">
+                <label for="editSubject">Предмет</label>
+                <input type="text" id="editSubject" placeholder="Математика" autocomplete="off">
+
+                <label for="editTeacher">Преподаватель</label>
+                <input type="text" id="editTeacher" placeholder="Иванов И.И." autocomplete="off">
+
+                <label for="editRoom">Аудитория</label>
+                <input type="text" id="editRoom" placeholder="ауд. 54" autocomplete="off">
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" id="cancelEdit">Отмена</button>
+                    <button type="submit" class="btn-login" id="saveEdit">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно добавления группы -->
+    <div class="modal-overlay" id="addGroupModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2>Добавить группу</h2>
+            <form id="addGroupForm" onsubmit="return false;">
+                <label for="newGroupName">Название группы</label>
+                <input type="text" id="newGroupName" placeholder="Новая группа" autocomplete="off">
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" id="cancelAddGroup">Отмена</button>
+                    <button type="submit" class="btn-login" id="submitAddGroup">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно переименования группы -->
+    <div class="modal-overlay" id="renameGroupModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2>Переименовать группу</h2>
+            <form id="renameGroupForm" onsubmit="return false;">
+                <label for="renameGroupName">Новое название</label>
+                <input type="text" id="renameGroupName" placeholder="Новое название" autocomplete="off">
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" id="cancelRenameGroup">Отмена</button>
+                    <button type="submit" class="btn-login" id="submitRenameGroup">Переименовать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно подтверждения удаления группы -->
+    <div class="modal-overlay" id="deleteGroupModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2>Подтверждение удаления</h2>
+            <p id="deleteGroupText">Удалить группу?</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelDeleteGroup">Отмена</button>
+                <button type="button" class="btn-delete" id="confirmDeleteGroup">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно подтверждения удаления пары -->
+    <div class="modal-overlay" id="removeLessonModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2>Подтверждение удаления</h2>
+            <p>Удалить последнюю пару для всех дней?</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelRemoveLesson">Отмена</button>
+                <button type="button" class="btn-delete" id="confirmRemoveLesson">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно подтверждения сброса -->
+    <div class="modal-overlay" id="resetChangesModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2>Подтверждение сброса</h2>
+            <p>Вы уверены, что хотите сбросить все изменения к исходным данным? Все несохранённые данные будут потеряны.</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelReset">Отмена</button>
+                <button type="button" class="btn-delete" id="confirmReset">Сбросить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно информации (одна кнопка) -->
+    <div class="modal-overlay" id="infoModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2>Информация</h2>
+            <p id="infoMessage">Сообщение</p>
+            <div class="modal-actions" style="justify-content: center;">
+                <button type="button" class="btn-login" id="closeInfoModal">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
